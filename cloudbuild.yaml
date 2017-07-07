@@ -1,0 +1,37 @@
+steps:
+
+# 秘匿情報を復号化
+- name: gcr.io/cloud-builders/gcloud
+  args:
+  - kms
+  - decrypt
+  - --ciphertext-file=.env.production.enc
+  - --plaintext-file=.env.production
+  - --location=global
+  - --keyring=<KEYRING_NAME>
+  - --key=<KEY_NAME>
+
+# digdagコンテナをビルド
+- name: 'gcr.io/cloud-builders/docker'
+  args: [ 'build', '-t', 'gcr.io/$PROJECT_ID/digdags:$BRANCH_NAME-$REVISION_ID', '.' ]
+
+# テスト用のマイグレーション実行
+#- name: 'gcr.io/$PROJECT_ID/rails-docker-sample:$BRANCH_NAME-$REVISION_ID'
+#  args: [ 'bundle', 'exec', 'db', 'migrate', 'RAILS_ENV=test' ]
+
+# minitestを実行
+#- name: 'gcr.io/$PROJECT_ID/rails-docker-sample:$BRANCH_NAME-$REVISION_ID'
+#  args: [ 'bundle', 'exec', 'rails', 'test' ]
+
+# Dockerイメージをpush
+- name: 'gcr.io/cloud-builders/docker'
+  args: ["push", "gcr.io/$PROJECT_ID/digdags:$BRANCH_NAME-$REVISION_ID"]
+
+# GKEにデプロイ
+#- name: 'gcr.io/cloud-builders/gcloud'
+#  entrypoint: 'bash'
+#  args:
+#  - '-c'
+#  - |
+#    gcloud container clusters get-credentials <CLUSTER_NAME> --zone <ZONE_NAME>
+#    kubectl set image deployment/rails rails=gcr.io/$PROJECT_ID/rails-docker-sample:$BRANCH_NAME-$REVISION_ID
